@@ -143,7 +143,7 @@ class ClusterAware(systemName: String,
 
   def logCpu(nodeMetrics: NodeMetrics): Unit = nodeMetrics match {
     case Cpu(address, timestamp, Some(systemLoadAverage), cpuCombined, cpuStolen, processors) =>
-      log.debug("Address: {} Load: {} ({} processors)", address, systemLoadAverage, processors)
+      println(s"Address: $address Load: $systemLoadAverage ($processors processors)")
       val date = new java.util.Date(timestamp)
       parent ! ClusterMetricCPU(systemName,
         HostPort(address.host.getOrElse("0.0.0.0"), address.port.getOrElse(0)),

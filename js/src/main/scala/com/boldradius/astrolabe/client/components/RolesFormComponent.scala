@@ -30,21 +30,21 @@ object RolesFormComponent {
         _ ← props.closeForm
       } yield {}
 
-    def selectRole(e: ReactMouseEvent): Callback =
+    def selectRole(e: ReactMouseEvent): Callback = {
+      val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
       t.state flatMap { state ⇒
-        val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
-
         val options: Seq[HTMLOptionElement] = state.roles.indices.map(i => select.childNodes(i).asInstanceOf[HTMLOptionElement])
 
         val selectedRoles = options.filter(_.selected).flatMap(r => state.roles.find(e => e == r.value))
 
         t.modState(_.copy(selectedRoles = selectedRoles))
       }
+    }
 
     def dependsOnRole(e: ReactMouseEvent): CallbackTo[Unit] = {
-      t.state.flatMap { state ⇒
-        val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
+      val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
 
+      t.state.flatMap { state ⇒
         log.debug("dependsOnRole select: " + select)
 
         val options: Seq[HTMLOptionElement] = state.roles.filter(e =>
@@ -57,10 +57,12 @@ object RolesFormComponent {
       }
     }
 
-    def selectType(e: ReactMouseEvent): CallbackTo[Unit] =
+    def selectType(e: ReactMouseEvent): CallbackTo[Unit] = {
+      val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
+
       t.state.flatMap { state ⇒
         t.modState(_.copy(dependencyType = {
-          e.currentTarget.asInstanceOf[HTMLSelectElement].selectedIndex match {
+          select.selectedIndex match {
             case 0 => DistributedRouter(state.dependencyName.getOrElse(""))
             case 1 => ClusterSharded(state.dependencyName.getOrElse(""))
             case 2 => Manual(state.dependencyName.getOrElse(""))
@@ -69,12 +71,15 @@ object RolesFormComponent {
 
         }))
       }
+    }
 
     def updateDepName(e: ReactEventI): Callback = {
+      val depName = e.currentTarget.value
+
       t.modState(_.copy(dependencyName = {
-        if (e.currentTarget.value.length > 0) {
-          log.debug("--- " + e.currentTarget.value)
-          Some(e.currentTarget.value)
+        if (depName.length > 0) {
+          log.debug("--- " + depName)
+          Some(depName)
         } else {
           None
         }
@@ -91,14 +96,18 @@ object RolesFormComponent {
     def addDep(e: ReactMouseEvent): Callback = {
       e.preventDefault()
 
-      val result = for {
-        state ← t.state
-        updated = state.dependencyName.map(name ⇒
-          RoleDependency(state.selectedRoles, state.dependsOnRoles, state.dependencyType.updateName(name))
-        ).map(rd =>
-          t.modState(_.copy(dependencies = state.dependencies :+ rd))
+      val result =
+        t.state.flatMap(state ⇒
+          state.dependencyName match {
+            case Some(depName) ⇒
+              val dependency =
+                RoleDependency(state.selectedRoles, state.dependsOnRoles, state.dependencyType.updateName(depName))
+
+              t.modState(_.copy(dependencies = state.dependencies :+ dependency))
+            case None ⇒
+              Callback {}
+          }
         )
-      } yield updated
 
       result.void
     }

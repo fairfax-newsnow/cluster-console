@@ -43,7 +43,7 @@ trait ClusterConsoleAppBase extends LogF { self: App =>
 
   clusterConsoleSystem.actorOf(
     HttpServiceActor.props(
-      akkaConf.getString("akka.remote.netty.tcp.hostname"), 9000, Timeout(30 seconds), router
+      akkaConf.getString("akka.remote.netty.tcp.hostname"), 8500, Timeout(30 seconds), router
     ),
     "ClusterConsoleHTTP"
   )

@@ -28,9 +28,13 @@ object DiscoveredClusterComponent {
         .void
     }
 
-    def selectCluster(e: ReactMouseEvent): Callback = Callback {
-      ClusterService.selectCluster(e.currentTarget.firstChild.nodeValue)
-      e.preventDefault()
+    def selectCluster(e: ReactMouseEvent): Callback = {
+      val selectedClusterValue = e.currentTarget.firstChild.nodeValue
+
+      Callback {
+        ClusterService.selectCluster(selectedClusterValue)
+        e.preventDefault()
+      }
     }
 
     def roles(system: String): Callback =

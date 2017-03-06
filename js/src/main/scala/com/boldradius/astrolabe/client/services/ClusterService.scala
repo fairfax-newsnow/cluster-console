@@ -67,10 +67,10 @@ trait ClusterService extends Actor {
       ClusterService.refreshCluster(system)
 
     case m: ClusterMetricCPU =>
-    // NOOP
+      ClusterService.refreshCluster(m.system)
 
     case m: ClusterMetricMemory =>
-    // NOOP
+      ClusterService.refreshCluster(m.system)
 
     case m @ DiscoveryBegun(system, seedNodes) =>
       clusterForm() = ClusterForm.initial

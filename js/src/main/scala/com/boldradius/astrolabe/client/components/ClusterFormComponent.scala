@@ -39,12 +39,15 @@ object ClusterFormComponent {
       }
     }
 
-    def updateClusterSelfHost(e: ReactEventI): Callback =
+    def updateClusterSelfHost(e: ReactEventI): Callback = {
+      val hostValue = e.currentTarget.value
+
       t.modState { s =>
-        val newState = s.copy(clusterForm = ClusterForm(s.clusterForm.name, e.currentTarget.value, s.clusterForm.seeds))
+        val newState = s.copy(clusterForm = ClusterForm(s.clusterForm.name, hostValue, s.clusterForm.seeds))
         updateClusterForm(newState.clusterForm)
         newState.copy(submitEnabled = getSubmitEnabled(newState))
       }
+    }
 
     def updateClusterSeedHost(index: Int)(e: ReactEventI): Callback = {
       val hostValue = e.currentTarget.value
@@ -79,38 +82,41 @@ object ClusterFormComponent {
         }.map(_._1)
       })
 
-    def updateClusterSeedPort(index: Int)(e: ReactEventI): Callback =
+    def updateClusterSeedPort(index: Int)(e: ReactEventI): Callback = {
+      val portValue = e.currentTarget.value
+
       if (e.currentTarget.value.length > 0) {
         try {
-          val portValue = e.currentTarget.value.toInt
+          val portIntValue = portValue.toInt
           t.modState { s =>
-            val newState = s.copy(clusterForm = setPortValue(s.clusterForm, portValue.toString, index))
+            val newState = s.copy(clusterForm = setPortValue(s.clusterForm, portValue, index))
             updateClusterForm(newState.clusterForm)
-            newState.copy(portValid = (portValue <= 65535), submitEnabled = getSubmitEnabled(newState))
+            newState.copy(portValid = portIntValue <= 65535, submitEnabled = getSubmitEnabled(newState))
           }
 
         } catch {
           case ex: Throwable =>
             t.modState(s =>
-              s.copy(portValid = false, clusterForm = setPortValue(s.clusterForm, e.currentTarget.value.toString, index),
+              s.copy(portValid = false, clusterForm = setPortValue(s.clusterForm, portValue, index),
                 submitEnabled = getSubmitEnabled(s)))
         }
       } else {
         t.modState { s =>
-          val newState = s.copy(portValid = true, clusterForm = setPortValue(s.clusterForm, e.currentTarget.value.toString, index))
+          val newState = s.copy(portValid = true, clusterForm = setPortValue(s.clusterForm, portValue, index))
           updateClusterForm(newState.clusterForm)
           newState.copy(submitEnabled = getSubmitEnabled(newState))
         }
 
       }
+    }
 
-    def addSeedNodeToForm: Callback = {
+    def addSeedNodeToForm(): Callback = {
       t.modState(s => s.copy(seeds = s.seeds + 1))
     }
 
     def getSubmitEnabled(s: State): Boolean = {
       s.clusterForm.name.length > 0 && s.clusterForm.seeds.forall(hp =>
-        hp.host.length > 0 && hp.port != 0 && hp.port.toString.length > 0)
+        hp.host.length > 0 && hp.port != "0" && hp.port.toString.length > 0)
     }
 
     def hide(): Callback =
