@@ -19,25 +19,22 @@ object DiscoveringClusterComponent {
 
   class Backend(t: BackendScope[Props, State]) extends RxObserver(t) {
 
-    def mounted(): Unit = {
-      observe(t.props.discovering)
+    def mounted(): Callback = Callback {
+      observe(t.props.toScalaFn().discovering)
     }
 
-    def select(e: ReactMouseEvent) = {
+    def select(e: ReactMouseEvent): Callback = Callback {
       e.preventDefault()
     }
 
   }
 
   val component = ReactComponentB[Props]("DiscoveringClusterComponent")
-    .initialStateP(P => {
-      State()
-    }) // initial state
+    .initialState(State())
     .backend(new Backend(_))
-    .render((P, S, B) => {
-
+    .render(scope => {
       div(paddingTop := "30px")(
-        if (P.discovering().isEmpty) {
+        if (scope.props.discovering().isEmpty) {
           span("")
         } else {
           div(cls := "row", height := "200px")(
@@ -46,9 +43,9 @@ object DiscoveringClusterComponent {
                 div(cls := "col-md-12")(
                   span(fontSize := "20px", color := globalStyles.textColor)("Discovery in Progress"))),
               div(cls := "row")(
-                P.discovering().values.map(e =>
+                scope.props.discovering().values.map(e =>
                   div(cls := "col-md-12", paddingTop := "5px", paddingBottom := "5px")(
-                    a(href := "", key := e.system, onClick ==> B.select)(
+                    a(href := "", key := e.system, onClick ==> scope.backend.select)(
                       span(color := globalStyles.navUnselectedTextColor, fontSize := "15px")(
                         span(e.system), span(e.seedNodes.map(hp => hp.host + ":" + hp.port))
                       )

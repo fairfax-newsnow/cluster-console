@@ -1,21 +1,14 @@
 package com.boldradius.astrolabe.client.components
 
-import com.boldradius.astrolabe.client.components.ClusterFormComponent.{ EditClusterProps, State }
-import com.boldradius.astrolabe.client.components.graph.Graph
-import Graph.State
-import Graph.State
-import com.boldradius.astrolabe.client.d3._
 import com.boldradius.astrolabe.client.modules.{ Roles, Mode, RxObserver }
 import com.boldradius.astrolabe.client.services.ClusterService
 import com.boldradius.astrolabe.client.style.GlobalStyles
-import com.boldradius.astrolabe.http.{ DiscoveryBegun, ClusterForm, HostPort, DiscoveredCluster }
+import com.boldradius.astrolabe.http.DiscoveredCluster
 import japgolly.scalajs.react.extra.OnUnmount
 import japgolly.scalajs.react.vdom.all._
 import japgolly.scalajs.react._
 import com.boldradius.astrolabe.client.services.Logger._
 import rx._
-
-import scala.scalajs.js
 
 object DiscoveredClusterComponent {
 
@@ -27,46 +20,45 @@ object DiscoveredClusterComponent {
 
   class Backend(t: BackendScope[Props, State]) extends RxObserver(t) {
 
-    def mounted(): Unit = {
-      observe(t.props.discovered)
-      observe(t.props.selected)
-
+    def mounted(): Callback = {
+      t.props.map { props ⇒
+        observe(props.discovered)
+        observe(props.selected)
+      }
+        .void
     }
 
-    def selectCluster(e: ReactMouseEvent) = {
+    def selectCluster(e: ReactMouseEvent): Callback = Callback {
       ClusterService.selectCluster(e.currentTarget.firstChild.nodeValue)
       e.preventDefault()
     }
 
-    def roles(system: String) = {
-      log.debug("open roles " + system)
-      t.modState(_.copy(rolesOpen = Some(system)))
-    }
+    def roles(system: String): Callback =
+      Callback.log("open roles " + system).flatMap(_ ⇒
+        t.modState(_.copy(rolesOpen = Some(system)))
+      )
 
-    def closeRolesForm() = {
-      log.debug("closeRolesForm")
-      t.modState(_.copy(rolesOpen = None))
-    }
+    def closeRolesForm(): Callback =
+      Callback.log("closeRolesForm").flatMap(_ ⇒
+        t.modState(_.copy(rolesOpen = None))
+      )
 
   }
 
   val component = ReactComponentB[Props]("DiscoveredClusterComponent")
-    .initialStateP(P => {
-      State(None)
-    }) // initial state
+    .initialState(State(None)) // initial state
     .backend(new Backend(_))
-    .render((P, S, B) => {
-
-      log.debug("************* S.rolesOpen " + S.rolesOpen)
+    .render(scope => {
+      log.debug("************* S.rolesOpen " + scope.state.rolesOpen)
 
       div(paddingTop := "30px")(
-        if (P.discovered().isEmpty) {
+        if (scope.props.discovered().isEmpty) {
           span("")
         } else {
           div(cls := "row", height := "200px")(
-            S.rolesOpen.flatMap(role =>
-              P.selected().map(cluster =>
-                RolesFormComponent(cluster, () => B.closeRolesForm())
+            scope.state.rolesOpen.flatMap(role =>
+              scope.props.selected().map(cluster =>
+                RolesFormComponent(cluster, scope.backend.closeRolesForm())
               )
             ).getOrElse[ReactElement](span("")),
             div(cls := "col-md-12")(
@@ -74,23 +66,25 @@ object DiscoveredClusterComponent {
                 div(cls := "col-md-12")(
                   span(fontSize := "20px", color := globalStyles.textColor)("Discovered"))),
               div(cls := "row")(
-                P.discovered().values.map(e =>
+                scope.props.discovered().values.map(e =>
 
-                  if (isSelected(P, e.system) && P.mode == Roles) {
-                    div(cls := "col-md-12", paddingTop := "10px", paddingBottom := "10px", backgroundColor := selectedBackground(P, e.system))(
-                      a(href := "", key := e.system, fontSize := "18px")(
-                        span(onClick ==> B.selectCluster,
-                          color := selectedColor(P, e.system))(e.system)
-                      ), span(cls := "pull-right")(button(cls := "btn btn-small", onClick --> B.roles(e.system))("Roles"))
-                    )
+                  if (isSelected(scope.props, e.system) && scope.props.mode == Roles) {
+                    div(cls := "col-md-12", paddingTop := "10px", paddingBottom := "10px",
+                      backgroundColor := selectedBackground(scope.props, e.system))(
+                        a(href := "", key := e.system, fontSize := "18px")(
+                          span(onClick ==> scope.backend.selectCluster,
+                            color := selectedColor(scope.props, e.system))(e.system)
+                        ), span(cls := "pull-right")(button(cls := "btn btn-small", onClick --> scope.backend.roles(e.system))("Roles"))
+                      )
 
                   } else {
-                    div(cls := "col-md-12", paddingTop := "10px", paddingBottom := "10px", backgroundColor := selectedBackground(P, e.system))(
-                      a(href := "", key := e.system, fontSize := "18px")(
-                        span(onClick ==> B.selectCluster,
-                          color := selectedColor(P, e.system))(e.system)
+                    div(cls := "col-md-12", paddingTop := "10px", paddingBottom := "10px",
+                      backgroundColor := selectedBackground(scope.props, e.system))(
+                        a(href := "", key := e.system, fontSize := "18px")(
+                          span(onClick ==> scope.backend.selectCluster,
+                            color := selectedColor(scope.props, e.system))(e.system)
+                        )
                       )
-                    )
 
                   }
                 )

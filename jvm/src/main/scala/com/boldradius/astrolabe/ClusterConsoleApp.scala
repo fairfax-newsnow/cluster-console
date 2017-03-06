@@ -1,6 +1,7 @@
 package com.boldradius.astrolabe
 
 import akka.actor.{ ActorRef, ActorSystem, Props }
+import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.boldradius.astrolabe.core.LogF
 import com.boldradius.astrolabe.http._
@@ -35,6 +36,8 @@ trait ClusterConsoleAppBase extends LogF { self: App =>
   val config = akkaConf.withFallback(ConfigFactory.load())
 
   val clusterConsoleSystem = ActorSystem("ClusterConsoleSystem", config)
+
+  implicit val materializer = ActorMaterializer()(clusterConsoleSystem)
 
   val router: ActorRef = clusterConsoleSystem.actorOf(Props[RouterActor], "router")
 

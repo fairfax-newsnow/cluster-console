@@ -3,14 +3,14 @@ package com.boldradius.astrolabe.client.modules
 import com.boldradius.astrolabe.client.ClusterConsoleApp.Loc
 import com.boldradius.astrolabe.client.components._
 import com.boldradius.astrolabe.client.services.Logger._
-import com.boldradius.astrolabe.client.services.{ ClusterService, ActivityLogService }
-
+import com.boldradius.astrolabe.client.services.{ ActivityLogService, ClusterService }
 import com.boldradius.astrolabe.client.style.{ GlobalStyles, Icon }
-import com.boldradius.astrolabe.http.{ HostPortUtil, ClusterForm }
+import com.boldradius.astrolabe.http.{ ClusterForm, DiscoveredCluster, HostPortUtil }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.OnUnmount
-import japgolly.scalajs.react.extra.router2.RouterCtl
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.all._
+
 import scalacss.ScalaCssReact._
 
 sealed trait Mode {
@@ -45,29 +45,33 @@ object ClusterMap {
 
   case class State(showClusterForm: Boolean, mode: Mode)
 
-  class Backend(t: BackendScope[Props, State]) extends RxObserver(t) {
-    def mounted(): Unit = {
-      ClusterService.getDiscoveredClusters()
-    }
+  case class Backend(t: BackendScope[Props, State]) extends RxObserver(t) {
+    def mounted(): Callback =
+      Callback { ClusterService.getDiscoveredClusters() }
 
-    def editCluster(cForm: ClusterForm): Unit = {
+    def editCluster(cForm: ClusterForm): Callback = Callback {
       ClusterService.subscribeToCluster(cForm.name, cForm.selfHost, cForm.seeds.map(HostPortUtil.apply))
     }
 
-    def selectCluster(name: String) = {
+    def selectCluster(name: String) = Callback {
       ClusterService.selectCluster(name)
     }
 
-    def showClusterForm(show: Boolean) = {
-      log.debug("called showClusterForm")
-      t.modState(_.copy(showClusterForm = show))
-    }
+    def showClusterForm(show: Boolean): Callback =
+      Callback.log("called showClusterForm")
+        .flatMap(_ ⇒ t.modState(_.copy(showClusterForm = show)))
+        .void
 
-    def closeClusterForm = showClusterForm(false)
+    def closeClusterForm: Callback = showClusterForm(false)
 
     def changeMode(e: ReactMouseEvent) = {
-      t.modState(_.copy(mode = Mode.fromString(e.currentTarget.childNodes.item(0).childNodes.item(0).childNodes.item(0).nodeValue), showClusterForm = false))
       e.preventDefault()
+      val element = e.currentTarget
+
+      t.modState(_.copy(mode = Mode.fromString(
+        element.childNodes.item(0).childNodes.item(0).childNodes.item(0).nodeValue),
+        showClusterForm = false
+      ))
     }
 
   }
@@ -75,36 +79,37 @@ object ClusterMap {
   // create the React component for Clusters mgmt
   val component = ReactComponentB[Props]("Clusters")
     .initialState(State(false, Members)) // initial state from TodoStore
-    .backend(new Backend(_))
-    .render((P, S, B) => {
-
-      log.debug("*** showClusterForm  " + S.showClusterForm)
+    .backend(Backend)
+    .render(scope => {
+      log.debug("*** showClusterForm  " + scope.state.showClusterForm)
 
       val toolBar: ReactElement =
         div(cls := "row", globalStyles.mainHeaders)(
           div(cls := "col-md-8")(h3("Clusters")),
           div(cls := "col-md-4")(button(cls := "pull-right btn-lg", marginTop := "9px", name := "showClusterForm",
-            tpe := "button", onClick --> B.showClusterForm(true))(Icon.plus)))
+            tpe := "button", onClick --> scope.backend.showClusterForm(true))(Icon.plus)))
 
-      val modal: Seq[ReactElement] = if (S.showClusterForm) Seq(ClusterFormComponent(P.store, B.editCluster,
-        () => B.closeClusterForm))
+      val modal: Seq[ReactElement] = if (scope.state.showClusterForm) Seq(ClusterFormComponent(scope.props.store,
+        scope.backend.editCluster,
+        scope.backend.closeClusterForm))
       else Seq.empty[ReactElement]
 
-      val leftNav: Seq[ReactElement] = toolBar +: (Seq(DiscoveringClusterComponent(P.store.getDiscoveringClusters),
-        DiscoveredClusterComponent(P.store.getDiscoveredClusters, P.store.getSelectedCluster, S.mode),
+      val leftNav: Seq[ReactElement] = toolBar +: (Seq(DiscoveringClusterComponent(scope.props.store.getDiscoveringClusters),
+        DiscoveredClusterComponent(scope.props.store.getDiscoveredClusters, scope.props.store.getSelectedCluster, scope.state.mode),
         ActivityLogComponent(ActivityLogService)
       ) ++ modal)
 
       def renderModeButton(m: Mode) =
-        if (S.mode.isActive(m)) {
-          li(cls := "active", onClick ==> B.changeMode, globalStyles.mainHeaders, borderTop := "1px solid white")(
-            a(href := "", globalStyles.mainHeaders, backgroundColor := globalStyles.mapBackground)(
-              span(color := globalStyles.textColor)(fontSize := "24px")(m.toString)
+        if (scope.state.mode.isActive(m)) {
+          li(cls := "active", onClick ==> scope.backend.changeMode,
+            globalStyles.mainHeaders, borderTop := "1px solid white")(
+              a(href := "", globalStyles.mainHeaders, backgroundColor := globalStyles.mapBackground)(
+                span(color := globalStyles.textColor)(fontSize := "24px")(m.toString)
+              )
             )
-          )
 
         } else {
-          li(onClick ==> B.changeMode, globalStyles.mainHeaders)(
+          li(onClick ==> scope.backend.changeMode, globalStyles.mainHeaders)(
             a(href := "", globalStyles.mainHeaders)(
               span(fontSize := "24px")(m.toString)
             )
@@ -128,7 +133,7 @@ object ClusterMap {
           clusterMapToolBar,
           div(cls := "row")(
             div(cls := "col-md-12")(
-              ClusterNodeGraphComponent(P.store, S.mode)
+              ClusterNodeGraphComponent(scope.props.store, scope.state.mode)
             )
           )
         )

@@ -8,6 +8,7 @@ import japgolly.scalajs.react.extra.OnUnmount
 import japgolly.scalajs.react.vdom.all._
 import japgolly.scalajs.react.{ ReactMouseEvent, BackendScope, ReactComponentB }
 import rx._
+import japgolly.scalajs.react._
 
 object ActivityLogComponent {
 
@@ -22,12 +23,12 @@ object ActivityLogComponent {
   }
 
   class Backend(t: BackendScope[Props, State]) extends RxObserver(t) {
-    def mounted(): Unit = {
-      observe(t.props.activities)
+    def mounted(): Unit = Callback {
+      observe(t.props.toScalaFn().activities)
       // MainDispatcher.dispatch(RefreshClusterMembers)
     }
 
-    def select(e: ReactMouseEvent) = {
+    def select(e: ReactMouseEvent) = Callback {
       e.preventDefault()
     }
 
@@ -36,8 +37,7 @@ object ActivityLogComponent {
   val component = ReactComponentB[Props]("ActivityLog")
     .initialState(State())
     .backend(new Backend(_))
-    .render((P, S, B) => {
-
+    .render(scope => {
       div(paddingTop := "30px")(
         div(cls := "row", height := "200px")(
           div(cls := "col-md-12", maxHeight := "600px", overflowY := "auto")(
@@ -46,7 +46,7 @@ object ActivityLogComponent {
                 span(fontSize := "20px", color := globalStyles.textColor)("Events"))
             ),
             div(
-              P.activities().map { e =>
+              scope.props.activities().map { e =>
 
                 val (bg, tcolor) = e match {
                   case ev: ClusterMemberUp => (globalStyles.nodeUpColor, "white")
@@ -72,7 +72,7 @@ object ActivityLogComponent {
         )
       )
     })
-    .componentDidMount(_.backend.mounted())
+    .componentDidMount(scope ⇒ Callback { scope.backend.mounted() })
     .configure(OnUnmount.install)
     .build
 

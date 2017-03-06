@@ -5,7 +5,7 @@ import com.boldradius.astrolabe.client.style.Icon.Icon
 import com.boldradius.astrolabe.client.style.{ GlobalStyles, Icon }
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.extra.OnUnmount
-import japgolly.scalajs.react.extra.router2.RouterCtl
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.all._
 
 import scalacss.ScalaCssReact._
@@ -18,8 +18,8 @@ object MainMenu {
 
   case class MenuItem(label: (Props) => ReactNode, icon: Icon, location: Loc)
 
-  class Backend(t: BackendScope[Props, _]) extends OnUnmount {
-    def mounted(): Unit = {
+  case class Backend(t: BackendScope[Props, _]) extends OnUnmount {
+    def mounted(): Callback = Callback {
     }
   }
 
@@ -30,13 +30,13 @@ object MainMenu {
 
   private val MainMenu = ReactComponentB[Props]("MainMenu")
     .stateless
-    .backend(new Backend(_))
-    .render((P, _, B) => {
+    .backend(Backend)
+    .render(scope => {
       ul(bss.navbar)(
         // build a list of menu items
         for (item <- menuItems) yield {
-          li((P.currentLoc == item.location) ?= (className := "active"),
-            P.ctl.link(item.location)(item.icon, " ", item.label(P))
+          li((scope.props.currentLoc == item.location) ?= (className := "active"),
+            scope.props.ctl.link(item.location)(item.icon, " ", item.label(scope.props))
           )
         }
       )

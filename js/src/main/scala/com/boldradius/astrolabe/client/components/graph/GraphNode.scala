@@ -15,22 +15,23 @@ object GraphNode {
 
   case class State(selected: Boolean)
 
-  class Backend(t: BackendScope[Props, State]) {
-    def select = t.modState(_.copy(selected = !t.state.selected))
+  case class Backend(t: BackendScope[Props, State]) {
+    def select: Callback = t.state.flatMap(state ⇒ t.modState(_.copy(selected = !state.selected))).void
   }
 
   val component = ReactComponentB[Props]("GraphNode")
-    .initialStateP(P => State(false))
-    .backend(new Backend(_))
-    .render { (P, S, B) =>
+    .initialState(State(false))
+    .backend(Backend)
+    .render { scope =>
       g(
-        circle(Attrs.cls := "node", Attrs.id := P.node.index, r := getRadius(P.mode, P.node), cx := P.node.x, cy := P.node.y,
+        circle(Attrs.cls := "node", Attrs.id := scope.props.node.index, r := getRadius(scope.props.mode, scope.props.node),
+          cx := scope.props.node.x, cy := scope.props.node.y,
           fill := {
 
-            if (S.selected) {
+            if (scope.state.selected) {
               "#EEE"
             } else {
-              P.node.status match {
+              scope.props.node.status match {
                 case "Up" => GlobalStyles.nodeUpColor
                 case "Unreachable" => GlobalStyles.nodeUnreachableColor
                 case "Removed" => GlobalStyles.nodeRemovedColor
@@ -45,7 +46,7 @@ object GraphNode {
         //
         //          }
         ),
-        getTextNodes(P.mode, P.node)
+        getTextNodes(scope.props.mode, scope.props.node)
       )
 
     }.build

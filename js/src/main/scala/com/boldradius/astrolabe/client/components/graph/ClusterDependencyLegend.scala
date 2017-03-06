@@ -8,41 +8,49 @@ import japgolly.scalajs.react.{ ReactComponentB, _ }
 
 object ClusterDependencyLegend {
 
-  case class Props(dep: RoleDependency, index: Int, selected: Boolean, selectDep: (RoleDependency, Boolean) => Unit)
+  case class Props(dep: RoleDependency, index: Int, selected: Boolean, selectDep: (RoleDependency, Boolean) => Callback)
 
   case class State(selected: Boolean)
 
-  class Backend(t: BackendScope[Props, State]) {
-    def select = {
-      t.modState(_.copy(selected = !t.state.selected))
-      t.props.selectDep(t.props.dep, !t.state.selected)
+  case class Backend(t: BackendScope[Props, State]) {
+    def select: Callback = {
+      (t.state flatMap { state ⇒
+        t.props flatMap { props ⇒
+          t.modState(_.copy(selected = !state.selected))
+          props.selectDep(props.dep, !state.selected)
+        }
+      })
+        .void
     }
   }
 
   val component = ReactComponentB[Props]("ClusterDependencyLegend")
-    .initialStateP(P => State(P.selected))
-    .backend(new Backend(_))
-    .render { (P, S, B) =>
-
-      val label = P.dep.tpe.name + ": " + P.dep.tpe.typeName + ". " + P.dep.roles.mkString(",") + "-->" + P.dep.dependsOn.mkString(",")
+    .initialState_P(props => State(props.selected))
+    .backend(Backend)
+    .render { componentScope =>
+      val label =
+        s"${componentScope.props.dep.tpe.name}:  ${componentScope.props.dep.tpe.typeName}. " +
+          s"${componentScope.props.dep.roles.mkString(",")} " +
+          s"--> ${componentScope.props.dep.dependsOn.mkString(",")}"
 
       val rectwidth = (label.length * 9) + 20
 
       g({
         import japgolly.scalajs.react.vdom.all._
-        onClick --> B.select
+        onClick --> componentScope.backend.select
       })(rect(width := rectwidth.toString, height := "40", fill := {
-        if (S.selected) {
-          LegendColors.colors(P.index % 5)
+        if (componentScope.state.selected) {
+          LegendColors.colors(componentScope.props.index % 5)
         } else {
           GlobalStyles.leftNavBackgrounColor
         }
-      }, x := 0, y := (P.index * 45) + 5, stroke := GlobalStyles.textColor),
+      }, x := 0, y := (componentScope.props.index * 45) + 5, stroke := GlobalStyles.textColor),
 
-        text(x := 10, y := (P.index * 45) + 30, fill := GlobalStyles.textColor, fontSize := "15px", fontFamily := "Courier")(label)
+        text(x := 10, y := (componentScope.props.index * 45) + 30,
+          fill := GlobalStyles.textColor, fontSize := "15px", fontFamily := "Courier")(label)
       )
     }.build
 
-  def apply(dep: RoleDependency, index: Int, selected: Boolean, selectDep: (RoleDependency, Boolean) => Unit) =
+  def apply(dep: RoleDependency, index: Int, selected: Boolean, selectDep: (RoleDependency, Boolean) => Callback) =
     component(Props(dep, index, selected, selectDep))
 }

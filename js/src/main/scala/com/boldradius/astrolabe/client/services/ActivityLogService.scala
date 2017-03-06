@@ -8,7 +8,7 @@ import rx._
 object ActivityLogService extends ActivityLogService {
 
   def init = {
-    log.debug("init ActivityLogService")
+    println("init ActivityLogService")
     MainDispatcher.register(this)
   }
 
@@ -24,7 +24,7 @@ trait ActivityLogService extends Actor {
 
   def receive: Receive = {
     case ac: ClusterEvent =>
-      log.debug(s"ActivityLogService: $ac")
+      println(s"ActivityLogService: $ac")
       logItems() = ac +: logItems()
 
     case other =>

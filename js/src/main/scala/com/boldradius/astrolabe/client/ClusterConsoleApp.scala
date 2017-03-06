@@ -4,8 +4,9 @@ import com.boldradius.astrolabe.client.modules.{ ClusterMap, Dashboard, MainMenu
 import com.boldradius.astrolabe.client.services.Logger._
 import com.boldradius.astrolabe.client.services._
 import com.boldradius.astrolabe.client.style.GlobalStyles
-import japgolly.scalajs.react.React
-import japgolly.scalajs.react.extra.router2._
+import japgolly.scalajs.react.{ React, ReactDOM }
+import japgolly.scalajs.react.extra.router.RouterConfigDsl
+import japgolly.scalajs.react.extra.router._
 import japgolly.scalajs.react.vdom.all._
 import org.scalajs.dom
 
@@ -54,16 +55,17 @@ object ClusterConsoleApp extends js.JSApp {
   @JSExport
   def main(): Unit = {
 
-    log.info("Application starting")
+    log.info(s"Application starting ${ReactDOM}")
 
     ActivityLogService.init
 
     // create stylesheet
     GlobalStyles.addToDocument()
+
     // create the router
     val router = Router(BaseUrl(dom.window.location.href.takeWhile(_ != '#')), routerConfig)
     // tell React to render the router in the document body
-    React.render(router(), dom.document.body)
+    ReactDOM.render(router(), dom.document.body)
 
     WebSocketClient.websocket
 

@@ -9,8 +9,8 @@ import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 object Settings {
 
   object versions {
-    val akka = "2.4.1"
-    val akkaHttp = "1.0"
+    val akka = "2.4.17"
+    val akkaHttp = "10.0.4"
     val autowire = "0.2.5"
     val sigarLoader = "1.6.6-rev002"
     val akkaLog4j = "0.2.0"
@@ -23,11 +23,11 @@ object Settings {
     val logBack = "1.1.2"
     val scalaLogging = "3.1.0"
     val config = "1.3.0"
-    val react = "0.12.2"
+    val react = "15.4.2"
     val scalacheck = "1.12.2"
     val scalaCSS = "0.3.0"
     val scalajsDom = "0.8.0"
-    val scalajsReact = "0.9.2"
+    val scalajsReact = "0.11.3"
     val scalaRx = "0.2.8"
     val scalaTags = "0.5.2"
     val scalaz = "7.1.2"
@@ -44,12 +44,10 @@ object Settings {
   val scalacOptions = Seq("-encoding", "UTF-8", "-target:jvm-1.8", "-deprecation", "-language:postfixOps")
   //  val javacOptions  = Seq("-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation", "-Xlint:-options"),
 
-
   /** Set some basic options when running the project with Revolver */
   val jvmRuntimeOptions = Seq(
     "-Xmx1G"
   )
-
 
 
   val sharedDependencies = Def.setting(Seq(
@@ -66,9 +64,9 @@ object Settings {
     "com.typesafe.akka" %% "akka-cluster" % versions.akka,
     "com.typesafe.akka" %% "akka-contrib" % versions.akka,
     "com.typesafe.akka" %% "akka-cluster-metrics" % versions.akka,
-    "com.typesafe.akka" %% "akka-http-experimental" % versions.akkaHttp,
-    "com.typesafe.akka" %% "akka-http-testkit-experimental" % versions.akkaHttp,
-    "com.typesafe.akka" % "akka-stream-experimental_2.11" % versions.akkaHttp,
+    "com.typesafe.akka" %% "akka-http" % versions.akkaHttp,
+    "com.typesafe.akka" %% "akka-http-testkit" % versions.akkaHttp,
+    "com.typesafe.akka" %% "akka-stream" % versions.akka,
     "com.typesafe.akka" %% "akka-slf4j" % versions.akka,
     "com.typesafe.akka" %% "akka-multi-node-testkit" % versions.akka,
     "com.typesafe.akka" %% "akka-testkit" % versions.akka,
@@ -88,14 +86,24 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "core" % versions.scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % versions.scalajsReact,
     "com.github.japgolly.scalacss" %%% "ext-react" % versions.scalaCSS,
-    "org.scala-js" %%% "scalajs-dom" % "0.8.0",
+    "org.scala-js" %%% "scalajs-dom" % "0.9.1",
     "com.lihaoyi" %%% "scalarx" % "0.2.8",
     "org.singlespaced" %%% "scalajs-d3" % versions.scalaD3,
-    "com.github.chandu0101.scalajs-react-components" %%% "core" % "0.2.8"
+    "com.github.chandu0101.scalajs-react-components" %%% "core" % "0.5.0"
   ))
 
   val jsDependencies = Def.setting(Seq(
-    "org.webjars" % "react" % versions.react / "react-with-addons.js" commonJSName "React",
+    "org.webjars.bower" % "react" % versions.react % "compile"
+      /        "react-with-addons.js"
+      minified "react-with-addons.min.js"
+      commonJSName "React",
+
+    "org.webjars.bower" % "react" % versions.react % "compile"
+      /         "react-dom.js"
+      minified  "react-dom.min.js"
+      dependsOn "react-with-addons.js"
+      commonJSName "ReactDOM",
+
     "org.webjars" % "jquery" % versions.jQuery / "jquery.js",
     "org.webjars" % "bootstrap" % versions.bootstrap / "bootstrap.js" dependsOn "jquery.js",
     "org.webjars" % "d3js" % versions.d3 / "d3.js"
@@ -104,6 +112,11 @@ object Settings {
   /** Same dependecies, but for production build, using minified versions */
   val jsDependenciesProduction = Def.setting(Seq(
     "org.webjars" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
+    "org.webjars.bower" % "react" % "15.4.2" % "test"
+      /         "react-dom.js"
+      minified  "react-dom.min.js"
+      dependsOn "react-with-addons.js"
+      commonJSName "ReactDOM",
     "org.webjars" % "jquery" % versions.jQuery / "jquery.js" minified "jquery.min.js",
     "org.webjars" % "bootstrap" % versions.bootstrap / "bootstrap.js" minified "bootstrap.min.js" dependsOn "jquery.js",
     "org.webjars" % "d3js" % versions.d3 / "d3.js" minified "d3.min.js" commonJSName "d3"

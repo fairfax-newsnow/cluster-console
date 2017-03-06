@@ -19,25 +19,28 @@ import Json._
 object UpickleMarshaller extends UpickleMarshaller
 
 trait UpickleMarshaller {
-  implicit def upickleFromRequestUnmarshaller[T: Reader](implicit fm: Materializer): FromRequestUnmarshaller[T] =
+  implicit def upickleFromRequestUnmarshaller[T: Reader]: FromRequestUnmarshaller[T] =
     new Unmarshaller[HttpRequest, T] {
-      def apply(req: HttpRequest)(implicit ec: ExecutionContext): Future[T] = {
+      def apply(req: HttpRequest)(implicit ec: ExecutionContext, materializer: Materializer): Future[T] = {
         req.entity.withContentType(ContentTypes.`application/json`).toStrict(1.second)
           .map(_.data.toArray).map(x => read[T](new String(x)))
       }
     }
 
-  implicit def upickleFromResponseUnmarshaller[T: Reader](implicit fm: Materializer): FromResponseUnmarshaller[T] =
+  implicit def upickleFromResponseUnmarshaller[T: Reader]: FromResponseUnmarshaller[T] =
     new Unmarshaller[HttpResponse, T] {
-      def apply(res: HttpResponse)(implicit ec: ExecutionContext): Future[T] = {
+      def apply(res: HttpResponse)(implicit ec: ExecutionContext, materializer: Materializer): Future[T] = {
         res.entity.withContentType(ContentTypes.`application/json`).toStrict(1.second).map(_.data.toArray).map(x => read[T](new String(x)))
       }
     }
 
   implicit def upickleToResponseMarshaller[T: Writer](implicit fm: Materializer): ToResponseMarshaller[T] =
-    Marshaller.withFixedCharset[T, MessageEntity](MediaTypes.`application/json`, HttpCharset.custom("*"))(tp => write[T](tp))
+    Marshaller.withFixedContentType[T, MessageEntity](
+      ContentType(MediaTypes.`application/json`, () ⇒ HttpCharset.custom("*"))
+    )(tp => write[T](tp))
 
   implicit def upickleToEntityMarshaller[T: Writer]: ToEntityMarshaller[T] =
-    Marshaller.withFixedCharset[T, MessageEntity](MediaTypes.`application/json`, HttpCharset.custom("*"))(tp =>
-      HttpEntity(write[T](tp)))
+    Marshaller.withFixedContentType[T, MessageEntity](
+      ContentType(MediaTypes.`application/json`, () ⇒ HttpCharset.custom("*"))
+    )(tp => HttpEntity(write[T](tp)))
 }

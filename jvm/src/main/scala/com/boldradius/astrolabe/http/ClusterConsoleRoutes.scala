@@ -1,5 +1,6 @@
 package com.boldradius.astrolabe.http
 
+import akka.NotUsed
 import akka.actor._
 import akka.pattern.ask
 import akka.http.scaladsl.marshalling.{ PredefinedToEntityMarshallers, ToEntityMarshaller }
@@ -7,13 +8,13 @@ import akka.http.scaladsl.model.ws.{ Message, TextMessage }
 import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, MediaTypes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ RequestContext, Route }
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ Flow, FlowGraph, Merge, Source }
+import akka.stream.{ ActorMaterializer, FlowShape }
+import akka.stream.scaladsl.{ Flow, GraphDSL, Merge, Source }
 import akka.util.Timeout
 import com.boldradius.astrolabe.clustertracking._
 import com.boldradius.astrolabe.core.LogF
 
-import scala.collection.mutable.{ Map => MutableMap }
+import scala.collection.mutable.{ Map ⇒ MutableMap }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
@@ -48,7 +49,7 @@ trait ClusterConsoleRoutes extends ActorLogging { this: Actor =>
         complete("")
 
       } ~ path("events") {
-        handleWebsocketMessages(clusterSocketFlow(socketPublisherRouter))
+        handleWebSocketMessages(clusterSocketFlow(socketPublisherRouter))
       }
     } ~ post {
       path("api" / Segments) { segments =>
@@ -66,9 +67,9 @@ trait ClusterConsoleRoutes extends ActorLogging { this: Actor =>
       }
     }
 
-  def clusterSocketFlow(router: ActorRef): Flow[Message, Message, Unit] = {
-    Flow() { implicit builder =>
-      import FlowGraph.Implicits._
+  def clusterSocketFlow(router: ActorRef): Flow[Message, Message, NotUsed] = {
+    Flow.fromGraph(GraphDSL.create() { implicit builder =>
+      import GraphDSL.Implicits._
 
       // create an actor source
       val source = Source.actorPublisher[String](Props(classOf[ClusterPublisher], router))
@@ -86,9 +87,8 @@ trait ClusterConsoleRoutes extends ActorLogging { this: Actor =>
       clusterEventsSource ~> merge ~> mapStringToMsg
 
       // expose ports
-      (mapMsgToString.inlet, mapStringToMsg.outlet)
-
-    }
+      FlowShape(mapMsgToString.in, mapStringToMsg.out)
+    })
   }
 
   override def receive: Receive = {

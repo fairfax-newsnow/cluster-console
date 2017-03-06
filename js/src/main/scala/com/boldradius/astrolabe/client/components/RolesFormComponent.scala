@@ -2,7 +2,7 @@ package com.boldradius.astrolabe.client.components
 
 import com.boldradius.astrolabe.client.services.{ ClusterService, Logger }
 import com.boldradius.astrolabe.client.style.Bootstrap.{ Button, Modal }
-import com.boldradius.astrolabe.client.style.{ GlobalStyles, Icon }
+import com.boldradius.astrolabe.client.style.Icon
 import com.boldradius.astrolabe.http._
 import japgolly.scalajs.react.vdom.all._
 import japgolly.scalajs.react._
@@ -11,7 +11,7 @@ import org.scalajs.dom.raw.{ HTMLOptionElement, HTMLSelectElement }
 
 object RolesFormComponent {
 
-  case class Props(cluster: DiscoveredCluster, closeForm: () => Unit)
+  case class Props(cluster: DiscoveredCluster, closeForm: Callback)
 
   case class State(
     dependencies: Seq[RoleDependency],
@@ -23,49 +23,54 @@ object RolesFormComponent {
 
   class Backend(t: BackendScope[Props, State]) {
 
-    def hide() = {
-      log.debug("RolesFormComponent hide()")
-      t.props.closeForm
-    }
+    def hide(): Callback =
+      for {
+        _ ← Callback.log("RolesFormComponent hide()")
+        props ← t.props
+        _ ← props.closeForm
+      } yield {}
 
-    def selectRole(e: ReactMouseEvent) = {
+    def selectRole(e: ReactMouseEvent): Callback =
+      t.state flatMap { state ⇒
+        val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
 
-      val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
+        val options: Seq[HTMLOptionElement] = state.roles.indices.map(i => select.childNodes(i).asInstanceOf[HTMLOptionElement])
 
-      val options: Seq[HTMLOptionElement] = t.state.roles.indices.map(i => select.childNodes(i).asInstanceOf[HTMLOptionElement])
+        val selectedRoles = options.filter(_.selected).flatMap(r => state.roles.find(e => e == r.value))
 
-      val selectedRoles = options.filter(_.selected).flatMap(r => t.state.roles.find(e => e == r.value))
-
-      t.modState(_.copy(selectedRoles = selectedRoles))
-    }
-
-    def dependsOnRole(e: ReactMouseEvent) = {
-      val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
-
-      log.debug("dependsOnRole select: " + select)
-
-      val options: Seq[HTMLOptionElement] = t.state.roles.filter(e =>
-        !t.state.selectedRoles.contains(e)).indices.map(i =>
-        select.childNodes(i).asInstanceOf[HTMLOptionElement])
-
-      val dependsOnRoles = options.filter(_.selected).flatMap(r => t.state.roles.find(e => e == r.value))
-
-      t.modState(_.copy(dependsOnRoles = dependsOnRoles))
-    }
-
-    def selectType(e: ReactMouseEvent) =
-      t.modState(_.copy(dependencyType = {
-        e.currentTarget.asInstanceOf[HTMLSelectElement].selectedIndex match {
-          case 0 => DistributedRouter(t.state.dependencyName.getOrElse(""))
-          case 1 => ClusterSharded(t.state.dependencyName.getOrElse(""))
-          case 2 => Manual(t.state.dependencyName.getOrElse(""))
-          case _ => Manual(t.state.dependencyName.getOrElse(""))
-        }
-
+        t.modState(_.copy(selectedRoles = selectedRoles))
       }
-      ))
 
-    def updateDepName(e: ReactEventI) = {
+    def dependsOnRole(e: ReactMouseEvent): CallbackTo[Unit] = {
+      t.state.flatMap { state ⇒
+        val select = e.currentTarget.asInstanceOf[HTMLSelectElement]
+
+        log.debug("dependsOnRole select: " + select)
+
+        val options: Seq[HTMLOptionElement] = state.roles.filter(e =>
+          !state.selectedRoles.contains(e)).indices.map(i =>
+          select.childNodes(i).asInstanceOf[HTMLOptionElement])
+
+        val dependsOnRoles = options.filter(_.selected).flatMap(r => state.roles.find(e => e == r.value))
+
+        t.modState(_.copy(dependsOnRoles = dependsOnRoles))
+      }
+    }
+
+    def selectType(e: ReactMouseEvent): CallbackTo[Unit] =
+      t.state.flatMap { state ⇒
+        t.modState(_.copy(dependencyType = {
+          e.currentTarget.asInstanceOf[HTMLSelectElement].selectedIndex match {
+            case 0 => DistributedRouter(state.dependencyName.getOrElse(""))
+            case 1 => ClusterSharded(state.dependencyName.getOrElse(""))
+            case 2 => Manual(state.dependencyName.getOrElse(""))
+            case _ => Manual(state.dependencyName.getOrElse(""))
+          }
+
+        }))
+      }
+
+    def updateDepName(e: ReactEventI): Callback = {
       t.modState(_.copy(dependencyName = {
         if (e.currentTarget.value.length > 0) {
           log.debug("--- " + e.currentTarget.value)
@@ -76,52 +81,60 @@ object RolesFormComponent {
       }))
     }
 
-    def canSubmit: Boolean =
-      t.state.selectedRoles.length > 0 &&
-        t.state.dependsOnRoles.length > 0 &&
-        t.state.dependencyName.isDefined
+    def canSubmit: CallbackTo[Boolean] =
+      t.state.map(state ⇒
+        state.selectedRoles.nonEmpty &&
+          state.dependsOnRoles.nonEmpty &&
+          state.dependencyName.isDefined
+      )
 
-    def addDep(e: ReactMouseEvent) = {
-      (for {
-        name <- t.state.dependencyName
-      } yield {
-        RoleDependency(t.state.selectedRoles, t.state.dependsOnRoles, t.state.dependencyType.updateName(name))
-      }).foreach(rd =>
-        t.modState(_.copy(dependencies =
-          t.state.dependencies :+ rd)))
-
+    def addDep(e: ReactMouseEvent): Callback = {
       e.preventDefault()
+
+      val result = for {
+        state ← t.state
+        updated = state.dependencyName.map(name ⇒
+          RoleDependency(state.selectedRoles, state.dependsOnRoles, state.dependencyType.updateName(name))
+        ).map(rd =>
+          t.modState(_.copy(dependencies = state.dependencies :+ rd))
+        )
+      } yield updated
+
+      result.void
     }
 
-    def submitForm() = {
-      ClusterService.updateClusterDependencies(t.props.cluster.copy(dependencies = t.state.dependencies))
-      t.props.closeForm
-    }
+    def submitForm(): Callback = {
+      val callback = t.props.flatMap { props ⇒
+        t.state.flatMap { state ⇒
+          ClusterService.updateClusterDependencies(props.cluster.copy(dependencies = state.dependencies))
+          props.closeForm
+        }
+      }
 
+      callback.void
+    }
   }
 
   val component = ReactComponentB[Props]("DiscoveringClusterComponent")
-    .initialStateP(P =>
-      State(P.cluster.dependencies, P.cluster.getRoles, Seq.empty[String], Seq.empty[String], None, DistributedRouter(""))
+    .initialState_P(props =>
+      State(props.cluster.dependencies, props.cluster.getRoles, Seq.empty[String], Seq.empty[String], None, DistributedRouter(""))
     )
     .backend(new Backend(_))
-    .render((P, S, B) =>
-
+    .render(scope =>
       Modal(Modal.Props(
         header = be => span(button(tpe := "button", cls := "pull-right", onClick --> be.hide(), Icon.close), h4(color := "black")("Describe Dependencies")),
-        footer = be => span(Button(Button.Props(() => {
-          B.submitForm();
-          be.hide()
-        }), "OK")),
-        closed = () => P.closeForm()),
+        footer = be => span(Button(Button.Props(
+          scope.backend.submitForm().>>(be.hide())
+        ), "OK")),
+        closed = scope.props.closeForm),
 
-        if (S.dependencies.nonEmpty) {
+        if (scope.state.dependencies.nonEmpty) {
           div(cls := "row")(
             div(cls := "col-md-12")(
               div(cls := "panel panel-primary")(
                 div(cls := "panel-heading")("Existing Dependencies"),
                 div(cls := "panel-body")(
-                  S.dependencies.map(d =>
+                  scope.state.dependencies.map(d =>
                     div(
                       span(d.tpe.name + ": "),
                       span(d.tpe.typeName + ": "),
@@ -145,19 +158,23 @@ object RolesFormComponent {
                   div(cls := "row")(
                     div(cls := "form-group col-md-4")(
                       label("Roles(s)"),
-                      select(name := "selectRole", multiple := "multiple", cls := "form-control", height := { (S.roles.length * 20) + "px" }, onChange ==> B.selectRole)(
-                        S.roles.map(r => option(value := r)(r))
+                      select(name := "selectRole", multiple := "multiple", cls := "form-control", height := {
+                        (scope.state.roles.length * 20) + "px"
+                      }, onChange ==> scope.backend.selectRole)(
+                        scope.state.roles.map(r => option(value := r)(r))
                       )
                     ),
                     div(cls := "form-group col-md-3")(
                       label("Depend(s) On")
                     ),
 
-                    S.selectedRoles.headOption.map(selectedRole =>
+                    scope.state.selectedRoles.headOption.map(selectedRole =>
                       div(cls := "form-group col-md-4")(
                         label("Role(s)"),
-                        select(name := "dependsOnRole", multiple := "multiple", cls := "form-control", height := { (S.roles.length * 20) + "px" }, onChange ==> B.dependsOnRole)(
-                          S.roles.filter(e => !S.selectedRoles.contains(e)).map(r => option(value := r)(r))
+                        select(name := "dependsOnRole", multiple := "multiple", cls := "form-control", height := {
+                          (scope.state.roles.length * 20) + "px"
+                        }, onChange ==> scope.backend.dependsOnRole)(
+                          scope.state.roles.filter(e => !scope.state.selectedRoles.contains(e)).map(r => option(value := r)(r))
                         )
                       )
                     ).getOrElse(span(""))
@@ -165,15 +182,15 @@ object RolesFormComponent {
                   div(cls := "row", paddingTop := "20px")(
                     div(cls := "col-md-12")(
                       div(cls := "row")(
-                        S.selectedRoles.headOption.map(selectedRole =>
+                        scope.state.selectedRoles.headOption.map(selectedRole =>
                           div(cls := "col-md-7")(
-                            div(cls := "col-md-8")(S.selectedRoles.mkString(",")),
+                            div(cls := "col-md-8")(scope.state.selectedRoles.mkString(",")),
                             div(cls := "col-md-4")("-->")
                           )
                         ).getOrElse(EmptyTag),
-                        S.dependsOnRoles.headOption.map(dependsOnRole =>
+                        scope.state.dependsOnRoles.headOption.map(dependsOnRole =>
                           div(cls := "col-md-5")(
-                            span(S.dependsOnRoles.mkString(",")))
+                            span(scope.state.dependsOnRoles.mkString(",")))
                         ).getOrElse(EmptyTag)
                       )
                     )
@@ -181,11 +198,11 @@ object RolesFormComponent {
                   div(cls := "row", paddingTop := "20px")(
                     div(cls := "form-group col-md-9")(
                       label("Dependency Name"),
-                      input(tpe := "text", cls := "form-control", onChange ==> B.updateDepName)
+                      input(tpe := "text", cls := "form-control", onChange ==> scope.backend.updateDepName)
                     ),
                     div(cls := "form-group col-md-4")(
                       label("Dependency Type"),
-                      select(onChange ==> B.selectType)(
+                      select(onChange ==> scope.backend.selectType)(
                         option("DistributedRouter"),
                         option("ClusterSharded"),
                         option("Manual")
@@ -194,9 +211,8 @@ object RolesFormComponent {
                   ),
                   div(cls := "row")(
                     div(cls := "col-md-12")(
-                      button(cls := "btn btn-submit", onClick ==> B.addDep, disabled := {
-                        !B.canSubmit
-                      })("Add dependency")
+                      button(cls := "btn btn-submit", onClick ==> scope.backend.addDep, disabled := scope.backend.canSubmit.runNow())(
+                        "Add dependency")
                     )
                   )
                 )
@@ -207,6 +223,7 @@ object RolesFormComponent {
       )
     ).build
 
-  def apply(cluster: DiscoveredCluster, closeForm: () => Unit) = component(Props(cluster, closeForm))
+  def apply(cluster: DiscoveredCluster, closeForm: Callback): ReactComponentU[Props, State, Backend, TopNode] =
+    component(Props(cluster, closeForm))
 
 }

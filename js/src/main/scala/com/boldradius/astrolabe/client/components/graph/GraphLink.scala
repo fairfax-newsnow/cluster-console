@@ -12,40 +12,40 @@ object GraphLink {
   case class Props(link: ClusterGraphLink, key: Int, mode: Mode)
 
   val component = ReactComponentB[Props]("GraphLink")
-    .render { P =>
+    .render { scope =>
 
-      P.mode match {
+      scope.props.mode match {
         case Members =>
           line(
             Attrs.cls := "link",
-            x1 := P.link.source.x,
-            y1 := P.link.source.y,
-            x2 := P.link.target.x,
-            y2 := P.link.target.y,
+            x1 := scope.props.link.source.x,
+            y1 := scope.props.link.source.y,
+            x2 := scope.props.link.target.x,
+            y2 := scope.props.link.target.y,
             stroke := "#999",
             strokeOpacity := ".6",
             strokeWidth := "1",
             strokeDasharray := "5,5")
         case Roles =>
 
-          val roleLink = P.link.asInstanceOf[ClusterGraphRoleLink]
+          val roleLink = scope.props.link.asInstanceOf[ClusterGraphRoleLink]
 
           line(
             Attrs.cls := "link",
-            x1 := P.link.source.x,
-            y1 := P.link.source.y,
-            x2 := P.link.target.x,
-            y2 := P.link.target.y,
+            x1 := scope.props.link.source.x,
+            y1 := scope.props.link.source.y,
+            x2 := scope.props.link.target.x,
+            y2 := scope.props.link.target.y,
             stroke := LegendColors.colors(roleLink.index % 5),
             strokeOpacity := "1",
             strokeWidth := "5")
         case Nodes =>
           line(
             Attrs.cls := "link",
-            x1 := P.link.source.x,
-            y1 := P.link.source.y,
-            x2 := P.link.target.x,
-            y2 := P.link.target.y,
+            x1 := scope.props.link.source.x,
+            y1 := scope.props.link.source.y,
+            x2 := scope.props.link.target.x,
+            y2 := scope.props.link.target.y,
             stroke := "#999",
             strokeOpacity := "1",
             strokeWidth := "1")

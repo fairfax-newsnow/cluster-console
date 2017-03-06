@@ -13,6 +13,7 @@ object WebSocketClient {
   lazy val websocket = new WebSocket(getWebsocketUri(dom.document))
 
   websocket.onopen = { (event: Event) =>
+    println(s"Websocket connection established $event")
     ClusterService.findDiscoveringClusters()
     ClusterService.findDiscoveredClusters()
     event
@@ -20,6 +21,7 @@ object WebSocketClient {
   websocket.onerror = { (event: ErrorEvent) => }
 
   websocket.onmessage = { (event: MessageEvent) =>
+    println(s"Websocket message received $event")
     val msg: ClusterProtocol = read[ClusterProtocol](event.data.toString)
     MainDispatcher.dispatch(msg)
     event

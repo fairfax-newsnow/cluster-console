@@ -1,7 +1,7 @@
 package com.boldradius.astrolabe.client.modules
 
 import com.boldradius.astrolabe.client.ClusterConsoleApp.Loc
-import japgolly.scalajs.react.extra.router2.RouterCtl
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.all._
 import japgolly.scalajs.react.{ ReactComponentB, _ }
 
