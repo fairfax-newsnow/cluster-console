@@ -111,8 +111,12 @@ object Settings {
 
   /** Same dependecies, but for production build, using minified versions */
   val jsDependenciesProduction = Def.setting(Seq(
-    "org.webjars" % "react" % versions.react / "react-with-addons.js" minified "react-with-addons.min.js" commonJSName "React",
-    "org.webjars.bower" % "react" % "15.4.2" % "test"
+    "org.webjars.bower" % "react" % versions.react % "compile"
+      /        "react-with-addons.js"
+      minified "react-with-addons.min.js"
+      commonJSName "React",
+
+    "org.webjars.bower" % "react" % versions.react % "compile"
       /         "react-dom.js"
       minified  "react-dom.min.js"
       dependsOn "react-with-addons.js"

@@ -49,14 +49,14 @@ object ClusterEventUtil{
       case ev:ClusterMemberUnreachable => s"MemberUnreachable ${ev.system} ${ev.member.labelSimple}"
       case ev:ClusterMemberRemoved => s"MemberRemoved ${ev.system} ${ev.member.labelSimple}"
       case ev:ClusterMemberExited => s"MemberExited ${ev.system} ${ev.member.labelSimple}"
-      case ev: ClusterMetricCPU =>
-        s"Member CPU Stats ${ev.system} Load Avg: ${ev.systemLoadAverage} " +
-        s"CPU Combined: ${ev.cpuCombined.getOrElse("n/a")} CPU Stolen: ${ev.cpuStolen.getOrElse("n/a")}" +
-        s"# Processors: ${ev.processors} | ${ev.memberAddress.label} @ ${ev.date}"
-      case ev: ClusterMetricMemory =>
-        s"Member Memory Stats ${ev.system} Used Heap (MB): ${ev.usedHeapMB} " +
-          s"Committed Heap (MB): ${ev.committedHeapMB} Max Heap (MB): ${ev.maxHeapMB.getOrElse("n/a")}" +
-          s"| ${ev.memberAddress.label} @ ${ev.date}"
+//      case ev: ClusterMetricCPU =>
+//        s"Member CPU Stats ${ev.system} Load Avg: ${ev.systemLoadAverage} " +
+//        s"CPU Combined: ${ev.cpuCombined.getOrElse("n/a")} CPU Stolen: ${ev.cpuStolen.getOrElse("n/a")}" +
+//        s"# Processors: ${ev.processors} | ${ev.memberAddress.label} @ ${ev.date}"
+//      case ev: ClusterMetricMemory =>
+//        s"Member Memory Stats ${ev.system} Used Heap (MB): ${ev.usedHeapMB} " +
+//          s"Committed Heap (MB): ${ev.committedHeapMB} Max Heap (MB): ${ev.maxHeapMB.getOrElse("n/a")}" +
+//          s"| ${ev.memberAddress.label} @ ${ev.date}"
     }
   }
 }

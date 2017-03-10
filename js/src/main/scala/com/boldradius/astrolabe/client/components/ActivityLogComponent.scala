@@ -27,7 +27,7 @@ object ActivityLogComponent {
       t.props.map(props ⇒
         observe(props.activities)
       )
-      // MainDispatcher.dispatch(RefreshClusterMembers)
+    // MainDispatcher.dispatch(RefreshClusterMembers)
 
     def select(e: ReactMouseEvent) = Callback {
       e.preventDefault()

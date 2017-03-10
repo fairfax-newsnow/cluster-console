@@ -54,9 +54,6 @@ object ClusterConsoleApp extends js.JSApp {
 
   @JSExport
   def main(): Unit = {
-
-    log.info(s"Application starting ${ReactDOM}")
-
     ActivityLogService.init
 
     // create stylesheet
