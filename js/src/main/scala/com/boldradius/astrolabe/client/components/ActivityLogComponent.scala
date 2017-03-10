@@ -23,10 +23,11 @@ object ActivityLogComponent {
   }
 
   class Backend(t: BackendScope[Props, State]) extends RxObserver(t) {
-    def mounted(): Unit = Callback {
-      observe(t.props.toScalaFn().activities)
+    def mounted(): Callback =
+      t.props.map(props ⇒
+        observe(props.activities)
+      )
       // MainDispatcher.dispatch(RefreshClusterMembers)
-    }
 
     def select(e: ReactMouseEvent) = Callback {
       e.preventDefault()
@@ -72,7 +73,7 @@ object ActivityLogComponent {
         )
       )
     })
-    .componentDidMount(scope ⇒ Callback { scope.backend.mounted() })
+    .componentDidMount(scope ⇒ scope.backend.mounted())
     .configure(OnUnmount.install)
     .build
 

@@ -19,9 +19,10 @@ object DiscoveringClusterComponent {
 
   class Backend(t: BackendScope[Props, State]) extends RxObserver(t) {
 
-    def mounted(): Callback = Callback {
-      observe(t.props.toScalaFn().discovering)
-    }
+    def mounted(): Callback =
+      t.props.map(props ⇒
+        observe(props.discovering)
+      )
 
     def select(e: ReactMouseEvent): Callback = Callback {
       e.preventDefault()
@@ -56,8 +57,8 @@ object DiscoveringClusterComponent {
           )
         }
       )
-    }
-    ).componentDidMount(_.backend.mounted())
+    })
+    .componentDidMount(_.backend.mounted())
     .configure(OnUnmount.install)
     .build
 

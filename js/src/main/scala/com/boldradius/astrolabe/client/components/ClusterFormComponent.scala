@@ -26,16 +26,9 @@ object ClusterFormComponent {
       val nameValue = e.currentTarget.value
 
       t.modState { s =>
-        try {
-          println("Modifying state")
-          val newState = s.copy(clusterForm = ClusterForm(nameValue, s.clusterForm.selfHost, s.clusterForm.seeds))
-          println("State updated")
-          updateClusterForm(newState.clusterForm)
-          println("Cluster form updated")
-          newState.copy(submitEnabled = getSubmitEnabled(newState))
-        } catch {
-          case e: Throwable ⇒ println(s"Error $e"); throw e
-        }
+        val newState = s.copy(clusterForm = ClusterForm(nameValue, s.clusterForm.selfHost, s.clusterForm.seeds))
+        updateClusterForm(newState.clusterForm)
+        newState.copy(submitEnabled = getSubmitEnabled(newState))
       }
     }
 
